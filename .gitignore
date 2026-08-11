@@ -1,0 +1,28 @@
+# Environments & Secrets
+.env
+venv/
+env/
+.venv/
+
+# Large Model Weight Checkpoints (>100MB)
+*.pth
+*.pt
+*.bin
+*.onnx
+*.safetensors
+final_bird_weights.pth
+
+# Python Cache & Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Data directory
+data/
+
+# IDE & OS Files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

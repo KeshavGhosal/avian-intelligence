@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Avian Intelligence | AI Bird Classifier</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0b0f19;
+            --bg-card: rgba(22, 31, 49, 0.7);
+            --bg-card-hover: rgba(30, 42, 66, 0.8);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --border-highlight: rgba(99, 102, 241, 0.4);
+            --primary: #6366f1;
+            --primary-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #d946ef 100%);
+            --accent-cyan: #06b6d4;
+            --accent-emerald: #10b981;
+            --accent-amber: #f59e0b;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --text-dim: #6b7280;
+            --shadow-glow: 0 8px 32px 0 rgba(99, 102, 241, 0.25);
+            --radius-lg: 20px;
+            --radius-md: 14px;
+            --radius-sm: 8px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 15% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 85% 75%, rgba(217, 70, 239, 0.12) 0%, transparent 45%);
+            background-attachment: fixed;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem 1rem;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        /* --- Header Section --- */
+        header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+            position: relative;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 16px;
+            border-radius: 30px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-bottom: 1.2rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--accent-amber);
+            box-shadow: 0 0 10px var(--accent-amber);
+            transition: all 0.3s ease;
+        }
+
+        .status-dot.online {
+            background-color: var(--accent-emerald);
+            box-shadow: 0 0 10px var(--accent-emerald);
+        }
+
+        .status-dot.offline {
+            background-color: #ef4444;
+            box-shadow: 0 0 10px #ef4444;
+        }
+
+        h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 3rem;
+            font-weight: 800;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.02em;
+            margin-bottom: 0.6rem;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.5;
+        }
+
+        /* --- AI Voice & Text Search Card --- */
+        .search-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .search-card-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.8rem;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .ai-search-container {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .ai-search-container input {
+            flex: 1;
+            padding: 0.85rem 1rem;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-color);
+            background: rgba(15, 23, 42, 0.6);
+            color: var(--text-main);
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        .ai-search-container input:focus {
+            border-color: var(--primary);
+        }
+
+        #voiceSearchBtn {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 0.85rem 1.2rem;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            font-size: 1.1rem;
+            transition: background 0.2s;
+        }
+
+        #voiceSearchBtn:hover {
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        /* --- Interactive Chat UI Elements --- */
+        .chat-message {
+            padding: 10px 14px;
+            border-radius: var(--radius-sm);
+            font-size: 0.95rem;
+            line-height: 1.4;
+            max-width: 85%;
+            white-space: pre-wrap;
+        }
+        
+        .chat-user {
+            background: var(--primary);
+            color: #fff;
+            align-self: flex-end;
+            border-bottom-right-radius: 2px;
+        }
+        
+        .chat-ai {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            align-self: flex-start;
+            border-bottom-left-radius: 2px;
+        }
+
+        /* --- Grid Layout --- */
+        .app-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+
+        @media (min-width: 900px) {
+            .app-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        /* --- Cards & Glassmorphism --- */
+        .glass-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 2rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .glass-card:hover {
+            border-color: var(--border-highlight);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .card-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.4rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* --- Upload Zone --- */
+        .drop-zone {
+            border: 2px dashed rgba(99, 102, 241, 0.3);
+            border-radius: var(--radius-md);
+            padding: 2.5rem 1.5rem;
+            text-align: center;
+            background: rgba(15, 23, 42, 0.4);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .drop-zone:hover, .drop-zone.dragover {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.08);
+            transform: translateY(-2px);
+        }
+
+        .drop-icon {
+            width: 56px;
+            height: 56px;
+            margin: 0 auto 1rem;
+            background: rgba(99, 102, 241, 0.15);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary);
+        }
+
+        .drop-zone p {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+
+        .drop-zone span {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+        }
+
+        #file-input {
+            display: none;
+        }
+
+        .preview-container {
+            margin-top: 1.5rem;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .preview-img-wrapper {
+            width: 100%;
+            max-height: 280px;
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            position: relative;
+            background: #000;
+        }
+
+        .preview-img-wrapper img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+        }
+
+        /* --- Buttons --- */
+        .btn-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 0.85rem 1.5rem;
+            border-radius: var(--radius-md);
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+            font-size: 1rem;
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.25s ease;
+        }
+
+        .btn-primary {
+            background: var(--primary-gradient);
+            color: #fff;
+            box-shadow: var(--shadow-glow);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            opacity: 0.92;
+            transform: translateY(-2px);
+            box-shadow: 0 12px 36px 0 rgba(99, 102, 241, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.12);
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        /* --- Results Panel --- */
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-dim);
+        }
+
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 1rem;
+            opacity: 0.3;
+        }
+
+        .result-content {
+            display: none;
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .species-hero {
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.25);
+            border-radius: var(--radius-md);
+            padding: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .species-name-common {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 0.2rem;
+        }
+
+        .species-name-latin {
+            font-style: italic;
+            color: var(--accent-cyan);
+            font-size: 1.05rem;
+            margin-bottom: 1rem;
+        }
+
+        .confidence-box {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.9rem;
+        }
+
+        .confidence-bar-bg {
+            flex: 1;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            margin: 0 1rem;
+            overflow: hidden;
+        }
+
+        .confidence-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-emerald));
+            border-radius: 4px;
+            width: 0%;
+            transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* --- Taxonomy Grid --- */
+        .taxonomy-section-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            margin-bottom: 0.8rem;
+        }
+
+        .taxonomy-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.8rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .tax-card {
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            padding: 0.8rem;
+            text-align: center;
+        }
+
+        .tax-label {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            margin-bottom: 0.3rem;
+        }
+
+        .tax-value {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-main);
+            word-break: break-word;
+        }
+
+        /* --- Ecology Section --- */
+        .ecology-card {
+            background: rgba(16, 185, 129, 0.05);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            border-radius: var(--radius-md);
+            padding: 1.25rem;
+            margin-top: 1.5rem;
+        }
+
+        .ecology-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--accent-emerald);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .eco-item {
+            margin-bottom: 0.8rem;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .eco-item strong {
+            color: var(--text-main);
+            display: block;
+            margin-bottom: 0.2rem;
+        }
+
+        .eco-item p {
+            color: var(--text-muted);
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Toast Alert */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: 1rem 1.5rem;
+            border-radius: var(--radius-md);
+            background: #1e293b;
+            color: #fff;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 100;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast.error {
+            border-color: #ef4444;
+            background: rgba(239, 68, 68, 0.15);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <div class="badge">
+                <span id="status-dot" class="status-dot"></span>
+                <span id="status-text">Checking Backend Status...</span>
+            </div>
+            <h1>Avian Intelligence</h1>
+            <p class="subtitle">Fine-tuned PyTorch Deep Learning & Ecological Intelligence for Bird Species Identification</p>
+        </header>
+
+        <!-- AI Voice & Interactive Chat Agent Card -->
+        <div class="search-card">
+            <div class="search-card-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                Interactive AI Bird Assistant
+            </div>
+            
+            <div class="ai-search-container">
+                <input 
+                    type="text" 
+                    id="aiSearchInput" 
+                    placeholder="Ask anything about any bird, habitat, or migration..."
+                >
+                <button id="voiceSearchBtn" title="Voice Search">🎤</button>
+                <button class="btn btn-primary" id="aiSearchBtn" style="flex: 0 0 130px; margin-top: 0;">Ask AI</button>
+            </div>
+            
+            <!-- Interactive Chat Log Container -->
+            <div id="aiChatLog" style="margin-top: 1.2rem; max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 5px; display: none;"></div>
+        </div>
+
+        <!-- Main App Grid -->
+        <div class="app-grid">
+            
+            <!-- Left Card: Image Upload -->
+            <div class="glass-card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary)"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                        Upload Bird Image
+                    </div>
+                </div>
+
+                <!-- Drop Zone -->
+                <div class="drop-zone" id="drop-zone">
+                    <div class="drop-icon">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    </div>
+                    <p><strong>Drag & Drop your bird image here</strong></p>
+                    <p>or click to browse from device</p>
+                    <span>Supports JPG, PNG, WEBP formats</span>
+                    <input type="file" id="file-input" accept="image/*">
+                </div>
+
+                <!-- Image Preview -->
+                <div class="preview-container" id="preview-container">
+                    <div class="preview-img-wrapper">
+                        <img id="preview-img" src="" alt="Selected bird image">
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="btn-group">
+                    <button class="btn btn-secondary" id="btn-sample">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        Use Sample
+                    </button>
+                    <button class="btn btn-primary" id="btn-classify" disabled>
+                        <span id="btn-classify-text">Identify Bird</span>
+                        <div id="btn-classify-spinner" class="spinner" style="display:none;"></div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right Card: Classification & Intelligence -->
+            <div class="glass-card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent-cyan)"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                        Classification Results
+                    </div>
+                </div>
+
+                <!-- Empty State -->
+                <div class="empty-state" id="empty-state">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    <p style="font-weight: 500; margin-bottom: 0.3rem;">No Prediction Yet</p>
+                    <p style="font-size: 0.85rem;">Upload an image or click "Use Sample" to analyze species taxonomy and ecology.</p>
+                </div>
+
+                <!-- Active Result Display -->
+                <div class="result-content" id="result-content">
+                    
+                    <!-- Species Hero -->
+                    <div class="species-hero">
+                        <div class="species-name-common" id="res-common-name">Mockingbird</div>
+                        <div class="species-name-latin" id="res-species-name">Tyrannus mockingbird</div>
+                        
+                        <div class="confidence-box">
+                            <span style="color:var(--text-muted);">Confidence Score</span>
+                            <div class="confidence-bar-bg">
+                                <div class="confidence-bar-fill" id="res-confidence-bar"></div>
+                            </div>
+                            <strong id="res-confidence-text" style="color:var(--accent-emerald);">98.5%</strong>
+                        </div>
+                    </div>
+
+                    <!-- Taxonomy Grid -->
+                    <div class="taxonomy-section-title">Taxonomic Breakdown</div>
+                    <div class="taxonomy-grid">
+                        <div class="tax-card">
+                            <div class="tax-label">Order</div>
+                            <div class="tax-value" id="res-tax-order">Passeriformes</div>
+                        </div>
+                        <div class="tax-card">
+                            <div class="tax-label">Family</div>
+                            <div class="tax-value" id="res-tax-family">Tyrannidae</div>
+                        </div>
+                        <div class="tax-card">
+                            <div class="tax-label">Genus</div>
+                            <div class="tax-value" id="res-tax-genus">Tyrannus</div>
+                        </div>
+                    </div>
+
+                    <!-- Ecology Intelligence Button & Panel -->
+                    <button class="btn btn-secondary" id="btn-ecology" style="width:100%;">
+                        <span id="btn-eco-text">🌿 Fetch Species Ecology & Habitat Info</span>
+                        <div id="btn-eco-spinner" class="spinner" style="display:none;"></div>
+                    </button>
+
+                    <div class="ecology-card" id="ecology-card" style="display:none;">
+                        <div class="ecology-title">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                            Ecological Intelligence
+                        </div>
+                        <div class="eco-item">
+                            <strong>Habitat:</strong>
+                            <p id="eco-habitat">-</p>
+                        </div>
+                        <div class="eco-item">
+                            <strong>Geographic Range:</strong>
+                            <p id="eco-range">-</p>
+                        </div>
+                        <div class="eco-item">
+                            <strong>Migratory Pattern:</strong>
+                            <p id="eco-migration">-</p>
+                        </div>
+                        <div class="eco-item">
+                            <strong>Did You Know?</strong>
+                            <p id="eco-funfact">-</p>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast">
+        <span id="toast-message">Notification</span>
+    </div>
+
+    <!-- Application JavaScript Logic -->
+    <script>
+        const API_BASE = 'http://127.0.0.1:8000';
+
+        // DOM Elements
+        const statusDot = document.getElementById('status-dot');
+        const statusText = document.getElementById('status-text');
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const previewContainer = document.getElementById('preview-container');
+        const previewImg = document.getElementById('preview-img');
+        const btnClassify = document.getElementById('btn-classify');
+        const btnClassifyText = document.getElementById('btn-classify-text');
+        const btnClassifySpinner = document.getElementById('btn-classify-spinner');
+        const btnSample = document.getElementById('btn-sample');
+        
+        const emptyState = document.getElementById('empty-state');
+        const resultContent = document.getElementById('result-content');
+        const resCommonName = document.getElementById('res-common-name');
+        const resSpeciesName = document.getElementById('res-species-name');
+        const resConfidenceBar = document.getElementById('res-confidence-bar');
+        const resConfidenceText = document.getElementById('res-confidence-text');
+        const resTaxOrder = document.getElementById('res-tax-order');
+        const resTaxFamily = document.getElementById('res-tax-family');
+        const resTaxGenus = document.getElementById('res-tax-genus');
+
+        const btnEcology = document.getElementById('btn-ecology');
+        const btnEcoText = document.getElementById('btn-eco-text');
+        const btnEcoSpinner = document.getElementById('btn-eco-spinner');
+        const ecologyCard = document.getElementById('ecology-card');
+        const ecoHabitat = document.getElementById('eco-habitat');
+        const ecoRange = document.getElementById('eco-range');
+        const ecoMigration = document.getElementById('eco-migration');
+        const ecoFunfact = document.getElementById('eco-funfact');
+
+        // AI Search & Voice Elements
+        const aiSearchInput = document.getElementById('aiSearchInput');
+        const aiSearchBtn = document.getElementById('aiSearchBtn');
+        const voiceSearchBtn = document.getElementById('voiceSearchBtn');
+        const aiChatLog = document.getElementById('aiChatLog'); // Updated selector
+
+        const toast = document.getElementById('toast');
+        const toastMessage = document.getElementById('toast-message');
+
+        let selectedFile = null;
+        let currentPredictedSpecies = "";
+
+        // Check Backend Health on Load
+        async function checkBackendHealth() {
+            try {
+                const res = await fetch(`${API_BASE}/health`, { method: 'GET' });
+                if (res.ok) {
+                    const data = await res.json();
+                    statusDot.className = 'status-dot online';
+                    statusText.textContent = `Backend Connected (${data.service})`;
+                } else {
+                    throw new Error('Non-200 response');
+                }
+            } catch (err) {
+                statusDot.className = 'status-dot offline';
+                statusText.textContent = 'Backend Offline (Run main.py)';
+            }
+        }
+        checkBackendHealth();
+        setInterval(checkBackendHealth, 10000);
+
+        // Toast Helper
+        function showToast(msg, isError = false) {
+            toastMessage.textContent = msg;
+            toast.className = `toast show ${isError ? 'error' : ''}`;
+            setTimeout(() => {
+                toast.className = 'toast';
+            }, 4000);
+        }
+
+        // File Selection Handlers
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                handleFileSelect(e.dataTransfer.files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files[0]) {
+                handleFileSelect(e.target.files[0]);
+            }
+        });
+
+        function handleFileSelect(file) {
+            if (!file.type.startsWith('image/')) {
+                showToast('Please select a valid image file (JPG, PNG, WEBP).', true);
+                return;
+            }
+            selectedFile = file;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                previewImg.src = e.target.result;
+                previewContainer.style.display = 'flex';
+                btnClassify.disabled = false;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Use Sample Image Button
+        btnSample.addEventListener('click', async () => {
+            try {
+                const canvas = document.createElement('canvas');
+                canvas.width = 300;
+                canvas.height = 300;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#78b45a';
+                ctx.fillRect(0, 0, 300, 300);
+                ctx.fillStyle = '#1e293b';
+                ctx.font = '20px Outfit';
+                ctx.fillText('Sample Bird Image', 60, 150);
+
+                canvas.toBlob((blob) => {
+                    const sampleFile = new File([blob], "sample_bird.jpg", { type: "image/jpeg" });
+                    handleFileSelect(sampleFile);
+                    showToast('Sample image generated and selected!');
+                }, 'image/jpeg');
+            } catch (err) {
+                showToast('Failed to load sample image.', true);
+            }
+        });
+
+        // Submit Image for Classification
+        btnClassify.addEventListener('click', async () => {
+            if (!selectedFile) return;
+
+            btnClassify.disabled = true;
+            btnClassifyText.textContent = 'Analyzing...';
+            btnClassifySpinner.style.display = 'block';
+
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+
+            try {
+                const response = await fetch(`${API_BASE}/api/classify`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errData = await response.json();
+                    throw new Error(errData.detail || 'Classification failed');
+                }
+
+                const data = await response.json();
+
+                // Display Results
+                currentPredictedSpecies = data.common_name || data.species;
+                resCommonName.textContent = data.common_name;
+                resSpeciesName.textContent = data.species;
+                
+                const confPercent = (data.confidence * 100).toFixed(1);
+                resConfidenceText.textContent = `${confPercent}%`;
+                resConfidenceBar.style.width = `${confPercent}%`;
+
+                resTaxOrder.textContent = data.taxonomy?.order || '-';
+                resTaxFamily.textContent = data.taxonomy?.family || '-';
+                resTaxGenus.textContent = data.taxonomy?.genus || '-';
+
+                emptyState.style.display = 'none';
+                resultContent.style.display = 'block';
+                ecologyCard.style.display = 'none';
+
+                showToast(`Classification complete: ${data.common_name}`);
+            } catch (err) {
+                showToast(`Error: ${err.message}`, true);
+            } finally {
+                btnClassify.disabled = false;
+                btnClassifyText.textContent = 'Identify Bird';
+                btnClassifySpinner.style.display = 'none';
+            }
+        });
+
+        // Fetch Species Ecology
+        btnEcology.addEventListener('click', async () => {
+            if (!currentPredictedSpecies) return;
+
+            btnEcology.disabled = true;
+            btnEcoText.textContent = 'Retrieving Ecology...';
+            btnEcoSpinner.style.display = 'block';
+
+            try {
+                const res = await fetch(`${API_BASE}/api/ecology`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ species: currentPredictedSpecies })
+                });
+
+                if (!res.ok) {
+                    const errData = await res.json();
+                    throw new Error(errData.detail || 'Ecology retrieval failed');
+                }
+
+                const data = await res.json();
+                ecoHabitat.textContent = data.habitat || 'Data unavailable';
+                ecoRange.textContent = data.range || 'Data unavailable';
+                ecoMigration.textContent = data.migratory_pattern || 'Data unavailable';
+                ecoFunfact.textContent = data.fun_fact || 'Data unavailable';
+
+                ecologyCard.style.display = 'block';
+                showToast('Ecological data loaded successfully!');
+            } catch (err) {
+                showToast(`Ecology Info: ${err.message}`, true);
+            } finally {
+                btnEcology.disabled = false;
+                btnEcoText.textContent = '🌿 Fetch Species Ecology & Habitat Info';
+                btnEcoSpinner.style.display = 'none';
+            }
+        });
+
+        // --- NEW: Interactive AI Chat Logic ---
+        function appendChatMessage(sender, text) {
+            aiChatLog.style.display = 'flex';
+            const msgDiv = document.createElement('div');
+            msgDiv.classList.add('chat-message', sender === 'user' ? 'chat-user' : 'chat-ai');
+            msgDiv.textContent = text;
+            aiChatLog.appendChild(msgDiv);
+            aiChatLog.scrollTop = aiChatLog.scrollHeight;
+            return msgDiv; // Return it so we can remove it if it's a loading state
+        }
+
+        aiSearchBtn.addEventListener('click', async () => {
+            const query = aiSearchInput.value.trim();
+            if (!query) {
+                showToast('Please type or speak a question first.', true);
+                return;
+            }
+
+            // 1. Render User Message
+            appendChatMessage('user', query);
+            aiSearchInput.value = '';
+
+            // 2. Render Loading State
+            const loadingMsg = appendChatMessage('ai', 'Querying AI Assistant...');
+
+            try {
+                // Using the existing ecology endpoint as an example query handler.
+                // If you build a dedicated /api/chat endpoint in your Node.js or Python backend, swap the URL here.
+                const res = await fetch(`${API_BASE}/api/ecology`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ species: query })
+                });
+
+                if (!res.ok) throw new Error('AI query service failed');
+
+                const data = await res.json();
+                
+                // 3. Remove Loading and Render Result
+                loadingMsg.remove();
+                appendChatMessage('ai', `Habitat: ${data.habitat}\nRange: ${data.range}\nMigration: ${data.migratory_pattern}\nFun Fact: ${data.fun_fact}`);
+                
+            } catch (err) {
+                loadingMsg.remove();
+                appendChatMessage('ai', `Error fetching response: ${err.message}. Make sure the backend endpoint supports this query.`);
+            }
+        });
+
+        // Web Speech API Integration for Voice Search
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            const recognition = new SpeechRecognition();
+            
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'en-IN'; // Indian English configuration
+
+            voiceSearchBtn.addEventListener('click', () => {
+                recognition.start();
+                voiceSearchBtn.style.background = '#ef4444'; // Red indicator while listening
+                showToast('Listening... Speak now.');
+            });
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                aiSearchInput.value = transcript;
+                voiceSearchBtn.style.background = '';
+                showToast(`Voice captured: "${transcript}"`);
+                // Automatically submit query
+                aiSearchBtn.click();
+            };
+
+            recognition.onerror = () => {
+                voiceSearchBtn.style.background = '';
+                showToast('Voice recognition error or permission blocked.', true);
+            };
+
+            recognition.onend = () => {
+                voiceSearchBtn.style.background = '';
+            };
+        } else {
+            voiceSearchBtn.style.display = 'none'; // Hide if browser doesn't support Web Speech API
+        }
+    </script>
+</body>
+</html>
