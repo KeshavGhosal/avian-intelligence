@@ -20,7 +20,7 @@ from PIL import Image, UnidentifiedImageError
 from dotenv import load_dotenv
 
 from model import BirdInferenceEngine
-from services import EcologyService, EcologyResponse
+from services import EcologyService, EcologyResponse, ChatService
 
 # Explicitly load the primary .env file to prevent loading .env.example or cached system vars
 load_dotenv(dotenv_path=".env", override=True)
@@ -35,18 +35,20 @@ logger = logging.getLogger("bird_classifier.main")
 # Global service instances
 inference_engine: BirdInferenceEngine = None
 ecology_service: EcologyService = None
+chat_service: ChatService = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan event handler for initializing model and services on startup."""
-    global inference_engine, ecology_service
+    global inference_engine, ecology_service, chat_service
     logger.info("Initializing application resources...")
     
     # Target state dict weights file
     model_path = os.getenv("MODEL_PATH", "final_bird_weights.pth")
     inference_engine = BirdInferenceEngine(checkpoint_path=model_path)
     ecology_service = EcologyService()
+    chat_service = ChatService()
     
     logger.info("Application startup completed successfully.")
     yield
@@ -89,6 +91,11 @@ class ClassifyResponse(BaseModel):
 
 class EcologyRequest(BaseModel):
     species: str = Field(..., min_length=1, description="Bird species name (common or scientific)")
+
+
+class ChatRequest(BaseModel):
+    message: str = Field(..., min_length=1, description="User's conversational message or question")
+    species_context: str = Field(default="", description="Currently identified bird species for context")
 
 
 # --- API Routes ---
@@ -178,6 +185,32 @@ async def get_species_ecology(request: EcologyRequest) -> EcologyResponse:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Ecology retrieval failed: {str(err)}"
+        )
+
+
+@app.post(
+    "/api/chat",
+    response_model=dict,
+    status_code=status.HTTP_200_OK,
+    tags=["Chat"]
+)
+async def chat_with_assistant(request: ChatRequest) -> dict:
+    """
+    Accepts a free-form user message and an optional species context string,
+    queries the ChatService (Google Gemini) with a conversational system prompt,
+    and returns a plain natural-language response as JSON.
+    """
+    try:
+        reply = await chat_service.chat(
+            message=request.message,
+            species_context=request.species_context or None
+        )
+        return {"reply": reply}
+    except Exception as err:
+        logger.error(f"Chat endpoint error: {str(err)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Chat failed: {str(err)}"
         )
 
 
