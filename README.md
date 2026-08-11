@@ -65,37 +65,37 @@ The diagram below illustrates the complete lifecycle of **Avian Intelligence**, 
 ```mermaid
 flowchart TD
     %% OFFLINE TRAINING & VALIDATION PIPELINE
-    subgraph PHASE1["Offline Training & Validation Pipeline (External / Kaggle)"]
-        node_A1["CUB-200-2011 Dataset<br/>(200 Fine-Grained Classes)"] --> node_A2["Data Preprocessing<br/>(448x448 Resize & ImageNet Norm)"]
-        node_A3["EVA-02 Base Backbone<br/>(eva02_base_patch14_448.mim_in22k_ft_in1k)"] --> node_A4["PyTorch / timm Training Loop<br/>(GPU Infrastructure)"]
+    subgraph PHASE1 [Offline Training Pipeline - Kaggle GPU]
+        node_A1["CUB-200-2011 Dataset - 200 Classes"] --> node_A2["Preprocessing - 448x448 Resize & Norm"]
+        node_A3["EVA-02 Base Backbone Model"] --> node_A4["PyTorch Training Loop - GPU"]
         node_A2 --> node_A4
-        node_A4 -->|Evaluation on 11,796 Test Images| node_A5["Accuracy: 97.91%<br/>(11,543 / 11,796 Correct)"]
-        node_A4 -->|Export State Dict| node_A6[("final_bird_weights.pth<br/>(~346 MB Checkpoint)")]
+        node_A4 -->|Evaluation on 11,796 Images| node_A5["Test Accuracy: 97.91% - 11,543 Correct"]
+        node_A4 -->|Export Weights| node_A6["final_bird_weights.pth - 346 MB"]
     end
 
     %% PRODUCTION RUNTIME INFRASTRUCTURE
-    subgraph PHASE2["Production Full-Stack Application Runtime"]
-        node_B1["User / Browser Client<br/>(index.html Web Dashboard)"] -->|Uploads Image (Multipart)| node_B2["FastAPI Web Server<br/>(main.py / Uvicorn Host)"]
+    subgraph PHASE2 [Production Full-Stack Application Runtime]
+        node_B1["Browser Client - Web Dashboard"] -->|Uploads Image| node_B2["FastAPI Web Server"]
 
-        subgraph CV_INFERENCE["Computer Vision Inference Engine (model.py)"]
+        subgraph CV_INFERENCE [Computer Vision Engine]
             node_B2 -->|Image Byte Stream| node_B3["BirdInferenceEngine"]
             node_A6 -.->|Loads Model Weights| node_B3
             node_B3 -->|Preprocess 448x448 RGB| node_B4["EVA-02 Base Vision Transformer"]
-            node_B4 -->|Logits Forward Pass| node_B5["Softmax Confidence & Argmax Class Index"]
-            node_B5 -->|Class Index 0-199| node_B6["Taxonomy Lookup Engine<br/>(cub200_data.py)"]
-            node_B6 -->|Resolves Order, Family, Genus| node_B7["Species & Taxonomy Payload"]
+            node_B4 -->|Logits Forward Pass| node_B5["Softmax Confidence & Argmax Class"]
+            node_B5 -->|Class Index 0-199| node_B6["Taxonomy Lookup Engine"]
+            node_B6 -->|Resolves Order Family Genus| node_B7["Species & Taxonomy Payload"]
         end
 
         node_B7 -->|Classification Result| node_B2
 
-        subgraph GENAI_ECOLOGY["Generative Ecological Intelligence (services.py)"]
-            node_B2 -->|POST /api/ecology (Species Name)| node_B8["EcologyService"]
+        subgraph GENAI_ECOLOGY [Generative Ecological Intelligence]
+            node_B2 -->|POST /api/ecology - Species Name| node_B8["EcologyService"]
             node_B8 -->|System Prompt & Pydantic Schema| node_B9["Google Gemini 3.6 Flash API"]
-            node_B9 -->|Structured JSON Output| node_B10["Pydantic EcologyResponse Validation"]
+            node_B9 -->|Structured JSON Output| node_B10["Pydantic Response Validation"]
         end
 
-        node_B10 -->|Habitat, Range, Migration, Fun Fact| node_B2
-        node_B2 -->|Unified JSON API Response| node_B1["Glassmorphic UI Presentation<br/>(Confidence Meter, Taxonomy Chips, Ecology Card)"]
+        node_B10 -->|Habitat Range Migration Fun Fact| node_B2
+        node_B2 -->|Unified JSON API Response| node_B1["Glassmorphic UI Presentation"]
     end
 
     classDef phaseStyle fill:#1e293b,stroke:#6366f1,stroke-width:2px,color:#f8fafc;
