@@ -559,7 +559,50 @@
             border-color: #ef4444;
             background: rgba(239, 68, 68, 0.15);
         }
+
+        /* --- Chat Bubbles --- */
+        .chat-message {
+            max-width: 80%;
+            padding: 0.65rem 1rem;
+            border-radius: 14px;
+            font-size: 0.92rem;
+            line-height: 1.55;
+            word-break: break-word;
+            animation: fadeIn 0.25s ease;
+        }
+
+        .chat-user {
+            background: rgba(99, 102, 241, 0.2);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            color: #e0e7ff;
+            border-top-right-radius: 4px;
+            align-self: flex-end;
+        }
+
+        .chat-ai {
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid rgba(16, 185, 129, 0.25);
+            color: #d1fae5;
+            border-top-left-radius: 4px;
+            align-self: flex-start;
+        }
+
+        /* Typing dot animation */
+        .dot-flashing {
+            display: inline-block;
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #10b981;
+            animation: dot-blink 1s infinite alternate;
+        }
+
+        @keyframes dot-blink {
+            from { opacity: 0.2; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1.1); }
+        }
     </style>
+
 </head>
 <body>
 
@@ -669,6 +712,10 @@
                             </div>
                             <strong id="res-confidence-text" style="color:var(--accent-emerald);">98.5%</strong>
                         </div>
+                        
+                        <button class="btn btn-secondary" id="speakResultBtn" style="margin-top: 1rem; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; background: rgba(99, 102, 241, 0.15); border-color: rgba(99, 102, 241, 0.4);">
+                            <span>🔊 Listen to Voice Narration</span>
+                        </button>
                     </div>
 
                     <!-- Taxonomy Grid -->
@@ -957,13 +1004,33 @@
         // --- NEW: Interactive AI Chat Logic ---
         function appendChatMessage(sender, text) {
             aiChatLog.style.display = 'flex';
-            const msgDiv = document.createElement('div');
-            msgDiv.classList.add('chat-message', sender === 'user' ? 'chat-user' : 'chat-ai');
-            msgDiv.textContent = text;
-            aiChatLog.appendChild(msgDiv);
+            const wrapper = document.createElement('div');
+            wrapper.style.cssText = `display:flex; align-items:flex-start; gap:10px; ${sender === 'user' ? 'flex-direction:row-reverse;' : ''}`;
+
+            // Avatar
+            const avatar = document.createElement('div');
+            avatar.style.cssText = `width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;margin-top:2px;background:${sender === 'user' ? 'rgba(99,102,241,0.25)' : 'rgba(16,185,129,0.2)'};`;
+            avatar.textContent = sender === 'user' ? '🧑' : '🦅';
+
+            // Bubble
+            const bubble = document.createElement('div');
+            bubble.classList.add('chat-message', sender === 'user' ? 'chat-user' : 'chat-ai');
+
+            if (text === '...') {
+                bubble.innerHTML = `<span style="display:inline-flex;gap:4px;align-items:center"><span class="dot-flashing"></span><span class="dot-flashing" style="animation-delay:0.2s"></span><span class="dot-flashing" style="animation-delay:0.4s"></span></span>`;
+            } else {
+                bubble.textContent = text;
+            }
+
+            wrapper.appendChild(avatar);
+            wrapper.appendChild(bubble);
+            aiChatLog.appendChild(wrapper);
             aiChatLog.scrollTop = aiChatLog.scrollHeight;
-            return msgDiv; // Return it so we can remove it if it's a loading state
+            // Return wrapper for removal (loading state)
+            wrapper.getBubble = () => bubble;
+            return wrapper;
         }
+
 
         aiSearchBtn.addEventListener('click', async () => {
             const query = aiSearchInput.value.trim();
@@ -977,30 +1044,74 @@
             aiSearchInput.value = '';
 
             // 2. Render Loading State
-            const loadingMsg = appendChatMessage('ai', 'Querying AI Assistant...');
+            const loadingMsg = appendChatMessage('ai', '...');
 
             try {
-                // Using the existing ecology endpoint as an example query handler.
-                // If you build a dedicated /api/chat endpoint in your Node.js or Python backend, swap the URL here.
-                const res = await fetch(`${API_BASE}/api/ecology`, {
+                const res = await fetch(`${API_BASE}/api/chat`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ species: query })
+                    body: JSON.stringify({
+                        message: query,
+                        species_context: currentPredictedSpecies || ''
+                    })
                 });
 
-                if (!res.ok) throw new Error('AI query service failed');
+                if (!res.ok) throw new Error('AI service unavailable');
 
                 const data = await res.json();
-                
-                // 3. Remove Loading and Render Result
                 loadingMsg.remove();
-                appendChatMessage('ai', `Habitat: ${data.habitat}\nRange: ${data.range}\nMigration: ${data.migratory_pattern}\nFun Fact: ${data.fun_fact}`);
+                appendChatMessage('ai', data.reply || "Hmm, I'm not sure about that one. Try asking something else!");
                 
             } catch (err) {
                 loadingMsg.remove();
-                appendChatMessage('ai', `Error fetching response: ${err.message}. Make sure the backend endpoint supports this query.`);
+                appendChatMessage('ai', "Sorry, I couldn't reach the AI service right now. Try again in a moment!");
             }
         });
+
+        // Text-to-Speech Voice Narration Handler
+        const speakResultBtn = document.getElementById('speakResultBtn');
+        if (speakResultBtn) {
+            speakResultBtn.addEventListener('click', () => {
+                if (!('speechSynthesis' in window)) {
+                    showToast('Text-to-Speech is not supported in this browser.', true);
+                    return;
+                }
+                if (window.speechSynthesis.speaking) {
+                    window.speechSynthesis.cancel();
+                    speakResultBtn.querySelector('span').textContent = '🔊 Listen to Voice Narration';
+                    showToast('Voice narration stopped.');
+                    return;
+                }
+
+                const common = resCommonName.textContent || '';
+                const latin = resSpeciesName.textContent || '';
+                const conf = resConfidenceText.textContent || '';
+                const order = resTaxOrder.textContent || '';
+                const family = resTaxFamily.textContent || '';
+                const genus = resTaxGenus.textContent || '';
+                const habitat = (ecoHabitat.textContent && ecoHabitat.textContent !== '-') ? ecoHabitat.textContent : '';
+                const funFact = (ecoFunfact.textContent && ecoFunfact.textContent !== '-') ? ecoFunfact.textContent : '';
+
+                const speechText = `Identified species: ${common}. Scientific name: ${latin}. Prediction confidence score: ${conf}. Taxonomy breakdown: Order ${order}, Family ${family}, Genus ${genus}. ${habitat ? 'Habitat: ' + habitat + '.' : ''} ${funFact ? 'Biological fun fact: ' + funFact : ''}`;
+
+                const utterance = new SpeechSynthesisUtterance(speechText);
+                utterance.rate = 0.95;
+                utterance.pitch = 1.0;
+                
+                utterance.onstart = () => {
+                    speakResultBtn.querySelector('span').textContent = '⏹️ Stop Voice Narration';
+                };
+                utterance.onend = () => {
+                    speakResultBtn.querySelector('span').textContent = '🔊 Listen to Voice Narration';
+                };
+                utterance.onerror = () => {
+                    speakResultBtn.querySelector('span').textContent = '🔊 Listen to Voice Narration';
+                };
+
+                window.speechSynthesis.speak(utterance);
+                showToast(`Playing voice narration for ${common}...`);
+            });
+        }
 
         // Web Speech API Integration for Voice Search
         if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
@@ -1012,9 +1123,13 @@
             recognition.lang = 'en-IN'; // Indian English configuration
 
             voiceSearchBtn.addEventListener('click', () => {
-                recognition.start();
-                voiceSearchBtn.style.background = '#ef4444'; // Red indicator while listening
-                showToast('Listening... Speak now.');
+                try {
+                    recognition.start();
+                    voiceSearchBtn.style.background = '#ef4444'; // Red indicator while listening
+                    showToast('Listening... Speak now.');
+                } catch (e) {
+                    showToast('Microphone is already active or listening.', true);
+                }
             });
 
             recognition.onresult = (event) => {
@@ -1026,9 +1141,13 @@
                 aiSearchBtn.click();
             };
 
-            recognition.onerror = () => {
+            recognition.onerror = (event) => {
                 voiceSearchBtn.style.background = '';
-                showToast('Voice recognition error or permission blocked.', true);
+                if (event.error === 'not-allowed' || event.error === 'permission-denied') {
+                    showToast('Microphone permission blocked! Click the Lock 🔒 icon in address bar to Allow Microphone.', true);
+                } else {
+                    showToast(`Voice error: ${event.error}. Click Lock 🔒 icon in URL bar to enable microphone.`, true);
+                }
             };
 
             recognition.onend = () => {
